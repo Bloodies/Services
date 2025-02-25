@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  rtsp-server:
+    container_name: rtsp-server
+    image: bluenviron/mediamtx:latest-ffmpeg-rpi
+    ports:
+      - "1935:1935"
+      - "8554:8554"
+      - "8888:8888"
+      - "9997:9997"
+      - "8889:8889"
+      - "8890:8890/udp"
+      - "8189:8189/udp"
+    environment:
+      - RTSP_PROTOCOLS=tcp
+      - MTX_PROTOCOLS=tcp
+      - MTX_WEBRTCADDITIONALHOSTS=192.168.0.1
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml
+#    networks:
+#      mtx_net:
+#        ipv4_address: 172.21.2.10
+
+  camera_filler:
+    container_name: camera_filler
+    image: linuxserver/ffmpeg:version-4.4-cli
+    links:
+      - "rtsp-server:rtsp-server"
+    depends_on:
+      - rtsp-server
+    volumes:
+      - ./samples/:/tmp/
+    command: -re -stream_loop -1 -i /tmp/segment_1.mp4 -c copy -bsf:v h264_mp4toannexb -f rtsp rtsp://rtsp-server:8554/camera?jwt=eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJsc1gyNWJvbG5Ma084WldldUdvZktiQ1A0a1NoaTFJUXRzZ2ZWdFFtQmdRIn0.eyJleHAiOjE3MTYzODQ2MDMsImlhdCI6MTcxNjM4NDMwMywianRpIjoiNzJjYjM4NmYtMTFkNy00MDIyLTg3MTktYjlhMzAyNGExNGNkIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL3JlYWxtcy9tZWRpYW10eCIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI3ZjZlOGIzNi1mOWIyLTRhMzEtOWI0Ny1lYmNkODQ3MmZkN2UiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJtZWRpYW10eCIsInNlc3Npb25fc3RhdGUiOiI5MDU4YTE0Mi1mZDY5LTQ3ZWMtOTE1OC1iNzFhNWQzNzE1ODQiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIi8qIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiZGVmYXVsdC1yb2xlcy1tZWRpYW10eCJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBtZWRpYW10eCBlbWFpbCIsInNpZCI6IjkwNThhMTQyLWZkNjktNDdlYy05MTU4LWI3MWE1ZDM3MTU4NCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibWVkaWFtdHhfcGVybWlzc2lvbnMiOlt7ImFjdGlvbiI6InB1Ymxpc2giLCJwYXRocyI6ImFsbCJ9XSwicHJlZmVycmVkX3VzZXJuYW1lIjoidGVzdHVzZXIifQ.kq21HVkb1wA7a2t95fhx9Ta67bwMq43rP3RNhgnz1YZlpC4QwyvEngb35DeYpuTDKAefncEq95xDyPDihAv4VExK-6g2xvUTj729SwuBDztVLOCyMS-B0R0TxwfMPjV7Hxkh_F-Jc_9GeSxHKRyohRzLXxt-r1w_v3jPvU3BJd1LIq187usyHvdWdLGH69jkjkO7NVsW-ni4hciCY8TMPFfU98Fhi6MSJeLfQ1udxBrtCV6VZe7-xLXBuEAV1F9FFIWbB01d0TubB6T6xtvM7t2wMQP1V8Uv_bq_TzJifBJ3Go2cg6vzhAyIoS0Zl8nBiFuAsvF3TM7KtAEqt5dAYQ
+#    networks:
+#      mtx_net:
+#        ipv4_address: 172.21.2.11
+
+
+networks:
+  mtx_net:
+    name: development
+    driver: bridge
+#    ipam:
+#     config:
+#       - subnet: 172.21.0.0/16

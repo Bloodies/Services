@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  camera_stream:
+    container_name: camera_stream
+    image: linuxserver/ffmpeg:latest
+    volumes:
+      - "./:/tmp/"
+    command: -re -stream_loop -1 -i /tmp/city_street.mp4 -bsf:v h264_mp4toannexb -c copy -f rtsp "rtsp://localhost:8554/camera?jwt=yJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJsc1gyNWJvbG5Ma084WldldUdvZktiQ1A0a1NoaTFJUXRzZ2ZWdFFtQmdRIn0.eyJleHAiOjE3MTYzOTc4MDAsImlhdCI6MTcxNjM5NzUwMCwianRpIjoiNTEwNTNiYTktZWZiMi00YjZhLWFkZjUtZTMwYzVlOTk1N2VlIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL3JlYWxtcy9tZWRpYW10eCIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI3ZjZlOGIzNi1mOWIyLTRhMzEtOWI0Ny1lYmNkODQ3MmZkN2UiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJtZWRpYW10eCIsInNlc3Npb25fc3RhdGUiOiJjMmViY2NiZi1lZDBjLTRlOWQtYTdjNC1iMjViMjA4ZDFjYmUiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIi8qIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiZGVmYXVsdC1yb2xlcy1tZWRpYW10eCJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBtZWRpYW10eCBlbWFpbCIsInNpZCI6ImMyZWJjY2JmLWVkMGMtNGU5ZC1hN2M0LWIyNWIyMDhkMWNiZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibWVkaWFtdHhfcGVybWlzc2lvbnMiOlt7ImFjdGlvbiI6InB1Ymxpc2giLCJwYXRocyI6ImFsbCJ9XSwicHJlZmVycmVkX3VzZXJuYW1lIjoidGVzdHVzZXIifQ.QGsKUsZUCE5T9Q6F_wkCpkMIvXFC82BXFk87WMMPx7WhApzB56UKn9m9KbBTuB9xd43oKonSIhSxY2lCyd_s6U6GYKpIfI7N4etjr9c7khTrrnsBEsYtzAqekobTnQjnSVX7nXt9zOeAW2U8xFGkH2Gh_CoJCcImLaVeVudrGdLYu8fAPKxf9BXHWGM2hI1IZQvN13L7NYavZemt92gTdR6Rw48aVbO4FP6ERFklngADzd6notpvs67hDiSh9ewZQ0qxxGghbuG8VpauOlnCS7m9efhNxKpVkGdKkF5FSp0Z0U686I7SLnR-pGUUOx6TuaF_yepDVheWssI-Mt8FmA"
+#    build:
+#      dockerfile: Dockerfile
+#      context: '.'
+#    networks:
+#      mtx_net:
+#        ipv4_address: 172.21.2.11
+
+
+networks:
+  mtx_net:
+    name: development
+    driver: bridge
+#    ipam:
+#     config:
+#       - subnet: 172.21.0.0/16
+
