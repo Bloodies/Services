@@ -7,7 +7,7 @@ services:
       service: keycloak
     networks:
       - development
-        # ipv4_address: 172.20.1.5
+        # ipv4_address: 172.20.1.1
 
   nginx:
     extends:
@@ -15,7 +15,7 @@ services:
       service: nginx
     networks:
       - development
-        # ipv4_address: 172.20.1.1
+        # ipv4_address: 172.20.1.2
 
   postgres:
     extends:
@@ -23,7 +23,7 @@ services:
       service: postgres
     networks:
       - development
-        # ipv4_address: 172.20.1.2
+        # ipv4_address: 172.20.1.3
 
   minio:
     extends:
@@ -32,7 +32,7 @@ services:
     networks:
       - development
       # development:
-      #   ipv4_address: 172.20.1.3
+      #   ipv4_address: 172.20.1.4
   
   mongo:
     extends:
@@ -41,7 +41,7 @@ services:
     networks:
       - development
       # development:
-      #   ipv4_address: 172.20.1.3
+      #   ipv4_address: 172.20.1.5
 
   rabbitmq:
     extends:
@@ -49,7 +49,7 @@ services:
       service: rabbitmq
     networks:
       - development
-        # ipv4_address: 172.20.1.4
+        # ipv4_address: 172.20.1.6
 
   redis:
     extends:
@@ -57,7 +57,7 @@ services:
       service: redis
     networks:
       - development
-        # ipv4_address: 172.20.1.4
+        # ipv4_address: 172.20.1.7
 
 
 
@@ -65,6 +65,7 @@ networks:
   development:
     name: development
     driver: bridge
+    external: true
     # ipam:
     #  config:
     #    - subnet: 172.20.0.0/16
