@@ -62,3 +62,8 @@ fabric.properties
 
 # VSCode
 *.code-workspace
+
+# MISC
+init*
+appendonlydir
+dump*

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+
+  redis_sentinel:
+    container_name: redis_sentinel
+    image: redis:7
+    command: /bin/sh -c "redis-sentinel /etc/redis/sentinel.conf"
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./sentinel.conf:/etc/redis/sentinel.conf
+    restart: always
+    networks:
+      - development
+
+  redis_cache:
+    container_name: redis_cache
+    image: redis:7
+    links:
+      - redis_sentinel
+    ports:
+      - 6379:6379
+    depends_on:
+      - redis_sentinel
+    restart: always
+    # command:
+    #   - redis-server
+    #   - --slaveof redis_sentinel 26379
+    networks:
+      - development
+
+  redis_init:
+    container_name: redis_init
+    image: redis:7
+    depends_on:
+      - redis_cache
+    entrypoint: [ "/bin/sh", "-c", "chmod +x /app/init_redis.sh && /app/init_redis.sh" ]
+    volumes:
+      - ./init_redis.sh:/app/init_redis.sh
+    networks:
+      - development
+
+networks:
+  development:
+    name: development
+    driver: bridge
+    external: true
