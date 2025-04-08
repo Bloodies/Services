@@ -1,3 +1,3 @@
 # Services
 
-Repository with templates of various services for use
+Repository with docker templates of various services for use
