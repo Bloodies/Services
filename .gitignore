@@ -1,6 +1,8 @@
 # Environments
 # .*.env
-# .env
+.env
+.env.*
+!.env.example
 .venv
 .lvenv
 env/
@@ -67,3 +69,5 @@ fabric.properties
 init*
 appendonlydir
 dump*
+# Local Redis data
+/redis/

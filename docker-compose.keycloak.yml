@@ -1,25 +1,33 @@
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.6
-    container_name: keycloak
-#    command: ["start-dev", "--import-realm"]
-    command: ["start-dev"]
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.0.6}
+    command: [start-dev]
     restart: unless-stopped
     environment:
-      # KC_DB: postgres
-      # KC_DB_USERNAME: keycloak
-      # KC_DB_PASSWORD: password
-      # KC_DB_URL: "jdbc:postgresql://postgres:5432/keycloak"
-      KC_METRICS_ENABLED: true
+      KC_HEALTH_ENABLED: 'true'
+      KC_METRICS_ENABLED: 'true'
       KC_LOG_LEVEL: INFO
-      KC_REALM_NAME: development
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      # GF_URL: ${GF_HOSTNAME}:${GF_SERVER_HTTP_PORT}
-      # GF_ADMIN_USERNAME: ${GF_ADMIN_USERNAME}
-      # GF_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD}
     ports:
-      - 8070:8080
-#    volumes:
-#      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
-#    logging: *logging
+      - "${BIND_ADDRESS:-127.0.0.1}:${KEYCLOAK_PORT:-8070}:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - 'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /health/ready HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; grep -q "HTTP/1.[01] 200" <&3'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  keycloak_data:

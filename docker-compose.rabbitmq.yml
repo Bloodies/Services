@@ -1,15 +1,29 @@
-version: '3.8'
-
 services:
   rabbitmq:
-    image: 'rabbitmq:3.6-management-alpine'
-    container_name: rabbitmq
-    restart: always
-    env_file:
-      - .env
+    # Upgrading existing 3.6 data requires a separate migration plan.
+    image: ${RABBITMQ_IMAGE:-rabbitmq:3.6-management-alpine}
+    hostname: rabbitmq
+    restart: unless-stopped
+    stop_grace_period: 60s
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBIT_MQ_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBIT_MQ_PASSWORD}
+      RABBITMQ_DEFAULT_USER: ${RABBIT_MQ_USER:?Set RABBIT_MQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_MQ_PASSWORD:?Set RABBIT_MQ_PASSWORD}
     ports:
-      - '5672:5672'
-      - '15672:15672'
+      - "${BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_PORT:-5672}:5672"
+      - "${BIND_ADDRESS:-127.0.0.1}:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [CMD, rabbitmqctl, status]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  rabbitmq_data:

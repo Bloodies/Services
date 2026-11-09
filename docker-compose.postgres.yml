@@ -1,22 +1,24 @@
-version: '3.8'
-
 services:
   postgres:
-    container_name: postgres
-    image: postgres:16.1-bullseye
-    env_file:
-      - .env
+    image: ${POSTGRES_IMAGE:-postgres:16-bullseye}
+    restart: unless-stopped
+    stop_grace_period: 60s
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - ~/data/postgres:/var/lib/postgresql/data/
-    restart: always
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
     ports:
-      - 5432:5432
+      - "${BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ${POSTGRES_DATA_DIR:-~/data/postgres}:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_PASSWORD}", "-h", "postgres" ]
-      interval: 2s
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
       timeout: 3s
-      retries: 40
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

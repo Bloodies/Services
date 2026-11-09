@@ -1,48 +1,54 @@
-version: '3.8'
-
 services:
+  redis_cache:
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: [redis-server, --appendonly, 'yes']
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${SENTINEL_REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli ping | grep -qx PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [development]
 
   redis_sentinel:
-    container_name: redis_sentinel
-    image: redis:7
-    command: /bin/sh -c "redis-sentinel /etc/redis/sentinel.conf"
-    ports:
-      - "26379:26379"
-    volumes:
-      - ./sentinel.conf:/etc/redis/sentinel.conf
-    restart: always
-    networks:
-      - development
-
-  redis_cache:
-    container_name: redis_cache
-    image: redis:7
-    links:
-      - redis_sentinel
-    ports:
-      - 6379:6379
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
-      - redis_sentinel
-    restart: always
-    # command:
-    #   - redis-server
-    #   - --slaveof redis_sentinel 26379
-    networks:
-      - development
-
-  redis_init:
-    container_name: redis_init
-    image: redis:7
-    depends_on:
-      - redis_cache
-    entrypoint: [ "/bin/sh", "-c", "chmod +x /app/init_redis.sh && /app/init_redis.sh" ]
+      redis_cache:
+        condition: service_healthy
+    # Sentinel rewrites its config; keep the template read-only and copy it to writable storage.
+    command: [sh, -ec, 'test -f /data/sentinel.conf || cp /etc/redis/sentinel.conf /data/sentinel.conf; exec redis-sentinel /data/sentinel.conf']
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${SENTINEL_PORT:-26379}:26379"
     volumes:
-      - ./init_redis.sh:/app/init_redis.sh
-    networks:
-      - development
+      - ./sentinel.conf:/etc/redis/sentinel.conf:ro
+      - sentinel_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli -p 26379 ping | grep -qx PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [development]
 
 networks:
   development:
-    name: development
-    driver: bridge
+    name: ${DEVELOPMENT_NETWORK:-development}
     external: true
+
+volumes:
+  redis_data:
+  sentinel_data:

@@ -1,3 +1,73 @@
 # Services
 
-Repository with docker templates of various services for use
+Шаблоны Docker Compose для локальной разработки. Запускать из корня репозитория.
+
+## Настройка и запуск
+
+1. Создайте `.env` по `.env.example`, сохранив существующие настройки, если файл уже есть.
+2. Замените демонстрационные пароли. Укажите `MINIO_IMAGE` и `MONGO_IMAGE` с проверенными тегами или digest, совместимыми с имеющимися данными. Версии образов можно переопределять через переменные `*_IMAGE` в Compose-файлах.
+3. Проверьте конфигурацию и запустите нужные сервисы:
+
+```sh
+docker compose config --quiet
+docker compose up -d postgres redis
+docker compose ps
+```
+
+Проверка общего файла требует переменных всех его сервисов. Для независимой проверки и запуска:
+
+```sh
+docker compose -f docker-compose.postgres.yml config --quiet
+docker compose -f docker-compose.postgres.yml up -d
+```
+
+По умолчанию опубликованные порты доступны на `127.0.0.1`. Для доступа из LAN задайте `BIND_ADDRESS` (для MediaMTX — `MEDIA_BIND_ADDRESS`). Redis в основном шаблоне без аутентификации; перед открытием его порта в сеть настройте ACL.
+
+Общий Compose создаёт сеть `development` (имя задаётся `DEVELOPMENT_NETWORK`). Вложенные примеры используют её как внешнюю. При самостоятельном запуске примеров сначала создайте сеть:
+
+```sh
+docker network create development
+```
+
+## Данные и совместимость
+
+- PostgreSQL: прежний каталог `~/data/postgres`, настраивается через `POSTGRES_DATA_DIR`. По умолчанию остаётся major 16; перед обновлением сделайте резервную копию.
+- MinIO: прежний каталог `~/minio`, переменная `MINIO_DATA_DIR`. Образ задаётся явно; HTTP readiness endpoint — `/minio/health/ready`. Внутренний healthcheck не добавлен, поскольку наличие HTTP-клиента зависит от выбранного образа.
+- Redis: прежний `./redis`, включён AOF, лимит памяти Redis 384 MiB при лимите контейнера 512 MiB. Политика `noeviction` возвращает ошибку записи при заполнении памяти. Перед переходом с уже установленного образа проверьте совместимость формата данных с `REDIS_IMAGE` (по умолчанию 7.4-alpine); не понижайте версию существующих данных.
+- MongoDB: volumes `mongo_data` и `mongo_config`.
+- RabbitMQ: volume `rabbitmq_data`, стабильный hostname `rabbitmq`. Сохранена версия 3.6: её обновление требует отдельного плана миграции. Это старый образ, используемый здесь для совместимости существующего шаблона.
+- Keycloak: volume `keycloak_data`, локальный `start-dev` со встроенной БД. Для серверного размещения нужны внешняя PostgreSQL, режим `start`, hostname и TLS/proxy.
+
+**До пересоздания существующих MongoDB, RabbitMQ и Keycloak перенесите нужные данные из старых контейнеров/анонимных volumes в новые хранилища.** Новые именованные volumes автоматически не забирают старые данные. Имена volumes также зависят от имени Compose-проекта: используйте одно и то же `-p` при переключении между отдельным и общим Compose.
+
+Начальные пользователи и пароли БД применяются при первом создании хранилища; изменение `.env` не меняет существующие учётные записи автоматически. Volumes не заменяют резервные копии. `docker compose down -v` удаляет именованные volumes.
+
+`.env` исключён из новых добавлений в Git, но ранее отслеживаемый файл остаётся в индексе и истории. Для прекращения отслеживания используйте `git rm --cached .env`. Если реальные секреты уже опубликованы, замените их.
+
+## NGINX
+
+Добавлен минимальный рабочий `nginx/nginx.conf` с `/healthz` и ответом 404 на остальные пути. Прежний основной конфиг был пустым, а `irvision.conf` отсутствовал. Прокси-маршруты необходимо добавить в `nginx/minio.conf` или основной конфиг. Порты 8891 и 8811 сохранены для пользовательских конфигураций; базовый конфиг их не слушает. TLS включается отдельно вместе с сертификатами и публикацией 443.
+
+## Redis Sentinel
+
+```sh
+docker compose --env-file .env -p redis-sentinel -f variations/redis/docker-compose.yml up -d
+```
+
+Это демонстрация одного Redis и одного Sentinel, без автоматического переключения на реплику. Для HA нужны реплики и минимум три Sentinel в разных доменах отказа. Redis примера публикуется на 6380, чтобы не конфликтовать с основным Redis. Sentinel копирует конфиг в свой volume и затем изменяет его самостоятельно; изменения шаблона не перезаписывают существующий конфиг в volume.
+
+## MediaMTX и FFmpeg
+
+Укажите `MEDIAMTX_IMAGE`, совместимый с существующим `mediamtx/mediamtx.yml`: конфигурационные ключи зависят от версии. Для Raspberry Pi выберите соответствующий образ. Задайте `MEDIAMTX_JWKS_URL` с доступным адресом Keycloak и свежий `CAMERA_RTSP_URL`, например `rtsp://rtsp-server:8554/camera?jwt=...`. Realm `mediamtx` должен существовать в Keycloak.
+
+```sh
+docker compose --env-file .env -p mediamtx -f mediamtx/docker-compose.yml up -d
+# Запуск с тестовым источником:
+docker compose --env-file .env -p mediamtx -f mediamtx/docker-compose.yml --profile samples up -d
+# Отдельный источник (может конфликтовать с camera_filler на том же RTSP path):
+docker compose --env-file .env -p camera-sample -f mediamtx/samples/docker-compose.yml up -d
+```
+
+`CAMERA_RTSP_URL` требуется при разборе файла даже без профиля `samples`. Видео монтируется только для чтения. FFmpeg использует RTSP TCP и перезапускается при выходе, включая неудачное подключение. Для WebRTC из LAN укажите доступный клиентам `MEDIAMTX_PUBLIC_HOST` и настройте `MEDIA_BIND_ADDRESS`. API-порт 9997 не публикуется: в существующем конфиге API выключен.
+
+Логи всех контейнеров ротируются: три файла по 10 MiB. Healthchecks сообщают статус готовности; сами по себе они не перезапускают нездоровый контейнер.
